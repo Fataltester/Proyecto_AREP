@@ -1,5 +1,35 @@
-# 🧬 Medical Data Generator
+# Proyecto final de AREP
+# Medical Data Generator
+## Integrantes
 
+- Laura Daniela Rodríguez Sánchez
+- Juan David Martínez Méndez
+- Santiago Gualdrón Rincón
+
+## Prerrequisitos
+
+Para el correcto uso del servicio, es necesario tener las siguientes aplicaciones instaladas:
+- PYTHON
+     ```sh
+   python3 --version
+   ```
+- GIT
+   ```sh
+   git --version
+   ```
+(NOTA: si alguna de estas aplicaciones no fue instalada, ir a la página oficial de cada una e instalar la versión recomendada).
+
+### Instalación
+1. clonar el repositorio con el siguiente comando y ingresar a la carpeta en donde esta incluido el codigo:
+
+   ```sh
+   git clone https://github.com/Fataltester/Proyecto_AREP.git
+   cd Proyecto_AREP
+   ```
+
+---
+
+## 🧬 Introducción
 Este proyecto es un **generador de datos sintéticos** diseñado para el contexto de la **simulación de historias clínicas y registros médicos**.  
 El sistema crea datasets estructurados y pseudorandomizados que imitan características reales de consultas médicas.  
 El generador soporta una cantidad variable de filas y produce datos que siguen **restricciones, distribuciones y tendencias reales**.
@@ -254,3 +284,17 @@ Las iteraciones tardan entre 17–19 segundos, consistente con solicitudes de al
 **Link**: https://youtu.be/VW9wmDOxI5I
 
 [![VideoPrototipo](https://img.youtube.com/vi/VW9wmDOxI5I/0.jpg)](https://www.youtube.com/watch?v=VW9wmDOxI5I)
+
+## Construido con
+
+[Git](https://git-scm.com) - Version Control System
+
+[Python](https://www.python.org/) - Python file script
+
+## Autor
+
+Laura Daniela Rodríguez Sánchez - [LauraRo166](https://github.com/LauraRo166)
+
+Juan David Martínez Méndez - [Fataltester](https://github.com/Fataltester)
+
+Santiago Gualdron Rincon - [Waldron63](https://github.com/Waldron63)
