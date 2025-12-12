@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generador de Datos Médicos</title>
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body class="bg-gray-100">
+
+<div class="max-w-4xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-xl">
+    <h1 class="text-3xl font-bold mb-6 text-center text-blue-600">
+        Generación de Datos Médicos Sintéticos
+    </h1>
+
+    <!-- FORMULARIO -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <div>
+            <label class="font-semibold">Cantidad de registros</label>
+            <input id="count" type="number" value="5"
+                   class="w-full border rounded px-3 py-2 mt-1">
+        </div>
+
+        <div>
+            <label class="font-semibold">Email (opcional)</label>
+            <input id="email" type="email"
+                   placeholder="correo@ejemplo.com"
+                   class="w-full border rounded px-3 py-2 mt-1">
+        </div>
+
+        <div class="flex items-end">
+            <button onclick="generarDatos()"
+                    class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                Generar
+            </button>
+        </div>
+    </div>
+
+    <!-- STATUS -->
+    <p id="status" class="mt-4 text-gray-600"></p>
+
+    <!-- TABLA -->
+    <div id="tablaContainer" class="mt-6 overflow-x-auto"></div>
+
+    <!-- GRAFICAS -->
+    <h2 class="text-2xl font-bold mt-10 mb-6">Análisis de Datos</h2>
+
+    <div class="grid grid-cols-1 gap-8">
+        <!-- Gráfica 1: Distribución de Altura por Género -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">1. Distribución de Altura por Género</h3>
+            <canvas id="graficaAltura"></canvas>
+        </div>
+
+        <!-- Gráfica 2: Distribución de Tipos de Sangre -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">2. Distribución de Tipos de Sangre</h3>
+            <canvas id="graficaTipoSangre"></canvas>
+        </div>
+
+        <!-- Gráfica 3: Dispersión Peso vs Edad -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">3. Dispersión de Peso vs Edad</h3>
+            <canvas id="graficaPesoEdad"></canvas>
+        </div>
+
+        <!-- Gráfica 4: Fumadores por Género -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">4. Distribución de Fumadores por Género</h3>
+            <canvas id="graficaFumadores"></canvas>
+        </div>
+
+        <!-- Gráfica 5: Distribución Edad Fumadores -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">5. Distribución de Edad según Fumador</h3>
+            <canvas id="graficaEdadFumadores"></canvas>
+        </div>
+
+        <!-- Gráficas 6: Medidas por Rango de Edad -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">6. Media de Frecuencia Cardíaca por Rango de Edad</h3>
+            <canvas id="graficaFCRango"></canvas>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">6. Media de Presión Sistólica por Rango de Edad</h3>
+            <canvas id="graficaPresionRango"></canvas>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">6. Media de Frecuencia Respiratoria por Rango de Edad</h3>
+            <canvas id="graficaFRRango"></canvas>
+        </div>
+
+        <!-- Gráfica 7: Consumo de Alcohol -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">7. Proporción de Consumo de Alcohol por Rango de Edad y Género</h3>
+            <canvas id="graficaAlcohol"></canvas>
+        </div>
+
+        <!-- Gráfica 8: Edad diagnóstico ALL -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">8. Distribución de Edad al Diagnóstico de ALL</h3>
+            <canvas id="graficaALL"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const API_URL = "https://z5aezszkv2.execute-api.us-east-1.amazonaws.com/beta/generate";
+
+    let datosGlobales = [];
+
+    async function generarDatos() {
+        const count = document.getElementById("count").value;
+        const email = document.getElementById("email").value;
+
+        document.getElementById("status").textContent = "Generando datos...";
+
+        const url = `${API_URL}?count=${count}${email ? "&email=" + email : ""}`;
+
+        try {
+            const res = await fetch(url);
+
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+
+            const json = await res.json();
+            const data = json.data;
+
+            datosGlobales = data;
+
+            document.getElementById("status").textContent =
+                `🟢 Se generaron ${data.length} registros`;
+
+            dibujarTabla(data);
+            graficar(data);
+
+        } catch (error) {
+            console.error("Error completo:", error);
+            document.getElementById("status").textContent =
+                `❌ Error: ${error.message}`;
+        }
+    }
+
+    function dibujarTabla(data) {
+        let html = `
+            <table class="w-full text-sm text-left border mt-4">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-2 py-1">Nombre</th>
+                        <th class="px-2 py-1">Género</th>
+                        <th class="px-2 py-1">Edad</th>
+                        <th class="px-2 py-1">Altura</th>
+                        <th class="px-2 py-1">Peso</th>
+                        <th class="px-2 py-1">Temp</th>
+                        <th class="px-2 py-1">Presión</th>
+                        <th class="px-2 py-1">FC</th>
+                        <th class="px-2 py-1">FR</th>
+                        <th class="px-2 py-1">Sangre</th>
+                        <th class="px-2 py-1">Fumador</th>
+                        <th class="px-2 py-1">Alcohol</th>
+                        <th class="px-2 py-1">Edad ALL</th>
+                        <th class="px-2 py-1">Tipo Visita</th>
+                        <th class="px-2 py-1">Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.forEach(p => {
+            html += `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-2 py-1">${p.Nombre} ${p.Apellido}</td>
+                    <td class="px-2 py-1">${p.Género}</td>
+                    <td class="px-2 py-1">${p.Edad}</td>
+                    <td class="px-2 py-1">${p["Altura (cm)"]} cm</td>
+                    <td class="px-2 py-1">${p["Peso (kg)"]} kg</td>
+                    <td class="px-2 py-1">${p["Temperatura (°C)"]}°C</td>
+                    <td class="px-2 py-1">${p["Presión Sistólica"]}/${p["Presión Diastólica"]}</td>
+                    <td class="px-2 py-1">${p["Frecuencia Cardíaca (lpm)"]}</td>
+                    <td class="px-2 py-1">${p["Frecuencia Respiratoria (rpm)"]}</td>
+                    <td class="px-2 py-1">${p["Tipo de Sangre"]}</td>
+                    <td class="px-2 py-1">${p.Fumador}</td>
+                    <td class="px-2 py-1">${p["Consume Alcohol"]}</td>
+                    <td class="px-2 py-1">${p["Edad de diagnóstico ALL (años)"]}</td>
+                    <td class="px-2 py-1">${p["Tipo de Visita"]}</td>
+                    <td class="px-2 py-1">${p["Fecha de Consulta"]}</td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table>`;
+        document.getElementById("tablaContainer").innerHTML = html;
+    }
+    // --- GRÁFICAS ---
+    let charts = {};
+
+    // Función auxiliar para calcular histograma
+    function calcularHistograma(valores) {
+        if (valores.length === 0) return { labels: [], values: [] };
+
+        const min = Math.min(...valores);
+        const max = Math.max(...valores);
+        const bins = 15;
+        const binSize = (max - min) / bins;
+
+        const labels = [];
+        const counts = [];
+
+        for (let i = 0; i < bins; i++) {
+            const binStart = min + i * binSize;
+            const binEnd = binStart + binSize;
+            const binCenter = ((binStart + binEnd) / 2).toFixed(1);
+            const count = valores.filter(v => v >= binStart && v < binEnd).length;
+
+            labels.push(binCenter);
+            counts.push(count);
+        }
+
+        return { labels, values: counts };
+    }
+
+    function categorizar_edad(edad) {
+        if (edad <= 11) return "Niños (0-11)";
+        if (edad <= 18) return "Jóvenes (12-18)";
+        if (edad <= 40) return "Adultos jóvenes (19-40)";
+        if (edad <= 65) return "Adultos (41-65)";
+        return "Mayores (66+)";
+    }
+
+    function graficar(data) {
+        // Destruir gráficas anteriores
+        Object.values(charts).forEach(chart => chart?.destroy());
+        charts = {};
+
+        // Normalizar género
+        data.forEach(p => {
+            if (p.Género) p.Género = p.Género.toLowerCase().trim();
+            p.RangoEdad = categorizar_edad(p.Edad);
+        });
+
+        // 1. DISTRIBUCIÓN DE ALTURA POR GÉNERO
+        const alturasMasc = data.filter(p => p.Género === "masculino").map(p => p["Altura (cm)"]);
+        const alturasFem = data.filter(p => p.Género === "femenino").map(p => p["Altura (cm)"]);
+
+        const distMasc = calcularHistograma(alturasMasc);
+        const distFem = calcularHistograma(alturasFem);
+
+        charts.altura = new Chart(document.getElementById("graficaAltura"), {
+            type: "line",
+            data: {
+                labels: distMasc.labels,
+                datasets: [
+                    {
+                        label: "Masculino",
+                        data: distMasc.values,
+                        borderColor: "#1f77b4",
+                        backgroundColor: "rgba(31, 119, 180, 0.3)",
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: "Femenino",
+                        data: distFem.values,
+                        borderColor: "#e377c2",
+                        backgroundColor: "rgba(227, 119, 194, 0.3)",
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    x: {title: {display: true, text: "Altura (cm)"}},
+                    y: {title: {display: true, text: "Frecuencia"}}
+                }
+            }
+        });
+
+        // 2. DISTRIBUCIÓN DE TIPOS DE SANGRE
+        const tiposSangre = ['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-'];
+        const conteoSangre = {};
+        data.forEach(p => {
+            const tipo = p["Tipo de Sangre"];
+            conteoSangre[tipo] = (conteoSangre[tipo] || 0) + 1;
+        });
+        const frecuenciasSangre = tiposSangre.map(t => (conteoSangre[t] || 0) / data.length * 100);
+
+        charts.sangre = new Chart(document.getElementById("graficaTipoSangre"), {
+            type: "bar",
+            data: {
+                labels: tiposSangre,
+                datasets: [{
+                    label: "Porcentaje (%)",
+                    data: frecuenciasSangre,
+                    backgroundColor: ['#4CAF50', '#2196F3', '#FFC107', '#FF5722', '#9C27B0', '#00BCD4', '#795548', '#607D8B']
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {display: false}
+                },
+                scales: {
+                    y: {title: {display: true, text: "Porcentaje (%)"}}
+                }
+            }
+        });
+
+        // 3. DISPERSIÓN PESO VS EDAD
+        charts.pesoEdad = new Chart(document.getElementById("graficaPesoEdad"), {
+            type: "scatter",
+            data: {
+                datasets: [{
+                    label: "Peso vs Edad",
+                    data: data.map(p => ({x: p.Edad, y: p["Peso (kg)"]})),
+                    backgroundColor: "rgba(54, 162, 235, 0.6)"
+                }]
+            },
+            options: {
+                scales: {
+                    x: {title: {display: true, text: "Edad (años)"}},
+                    y: {title: {display: true, text: "Peso (kg)"}}
+                }
+            }
+        });
+
+        // 4. FUMADORES POR GÉNERO
+        const fumadoresMasc = data.filter(p => p.Fumador === "Sí" && p.Género === "masculino").length;
+        const fumadoresFem = data.filter(p => p.Fumador === "Sí" && p.Género === "femenino").length;
+
+        // Solo mostrar si hay fumadores
+        if (fumadoresMasc + fumadoresFem > 0) {
+            charts.fumadores = new Chart(document.getElementById("graficaFumadores"), {
+                type: "pie",
+                data: {
+                    labels: ["Masculino", "Femenino"],
+                    datasets: [{
+                        data: [fumadoresMasc, fumadoresFem],
+                        backgroundColor: ["#1f77b4", "#e377c2"]
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {display: true}
+                    }
+                }
+            });
+        } else {
+            // Mostrar mensaje si no hay fumadores
+            document.getElementById("graficaFumadores").parentElement.innerHTML =
+                '<p class="text-gray-500 text-center py-4">No hay fumadores en los datos generados</p>';
+        }
+
+        // 5. DISTRIBUCIÓN EDAD FUMADORES
+        const edadesFumadores = data.filter(p => p.Fumador === "Sí").map(p => p.Edad);
+
+        if (edadesFumadores.length > 0) {
+            const distFumadores = calcularHistograma(edadesFumadores);
+            charts.edadFumadores = new Chart(document.getElementById("graficaEdadFumadores"), {
+                type: "line",
+                data: {
+                    labels: distFumadores.labels,
+                    datasets: [{
+                        label: "Fumadores",
+                        data: distFumadores.values,
+                        borderColor: "red",
+                        backgroundColor: "rgba(255, 0, 0, 0.3)",
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {title: {display: true, text: "Edad"}},
+                        y: {title: {display: true, text: "Frecuencia"}}
+                    }
+                }
+            });
+        }
+
+        // 6. MEDIDAS POR RANGO DE EDAD
+        const rangos = ["Niños (0-11)", "Jóvenes (12-18)", "Adultos jóvenes (19-40)", "Adultos (41-65)", "Mayores (66+)"];
+
+        const promediosPorRango = (variable) => {
+            const promedios = {};
+            rangos.forEach(r => {
+                const valores = data.filter(p => p.RangoEdad === r).map(p => p[variable]);
+                promedios[r] = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
+            });
+            return rangos.map(r => promedios[r]);
+        };
+
+        charts.fcRango = new Chart(document.getElementById("graficaFCRango"), {
+            type: "bar",
+            data: {
+                labels: rangos,
+                datasets: [{
+                    label: "Frecuencia Cardíaca (lpm)",
+                    data: promediosPorRango("Frecuencia Cardíaca (lpm)"),
+                    backgroundColor: ["#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854"]
+                }]
+            }
+        });
+
+        charts.presionRango = new Chart(document.getElementById("graficaPresionRango"), {
+            type: "bar",
+            data: {
+                labels: rangos,
+                datasets: [{
+                    label: "Presión Sistólica",
+                    data: promediosPorRango("Presión Sistólica"),
+                    backgroundColor: ["#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854"]
+                }]
+            }
+        });
+
+        charts.frRango = new Chart(document.getElementById("graficaFRRango"), {
+            type: "bar",
+            data: {
+                labels: rangos,
+                datasets: [{
+                    label: "Frecuencia Respiratoria (rpm)",
+                    data: promediosPorRango("Frecuencia Respiratoria (rpm)"),
+                    backgroundColor: ["#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854"]
+                }]
+            }
+        });
+
+        // 7. CONSUMO DE ALCOHOL POR RANGO Y GÉNERO
+        const alcoholData = {};
+        rangos.forEach(r => {
+            ["masculino", "femenino"].forEach(g => {
+                const total = data.filter(p => p.RangoEdad === r && p.Género === g).length;
+                const consumidores = data.filter(p => p.RangoEdad === r && p.Género === g && p["Consume Alcohol"] === "Sí").length;
+                alcoholData[`${r}_${g}`] = total > 0 ? consumidores / total : 0;
+            });
+        });
+
+        charts.alcohol = new Chart(document.getElementById("graficaAlcohol"), {
+            type: "bar",
+            data: {
+                labels: rangos,
+                datasets: [
+                    {
+                        label: "Masculino",
+                        data: rangos.map(r => alcoholData[`${r}_masculino`]),
+                        backgroundColor: "#1f77b4"
+                    },
+                    {
+                        label: "Femenino",
+                        data: rangos.map(r => alcoholData[`${r}_femenino`]),
+                        backgroundColor: "#e377c2"
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: {
+                        title: {display: true, text: "Proporción"},
+                        max: 1
+                    }
+                }
+            }
+        });
+
+        // 8. DISTRIBUCIÓN EDAD DIAGNÓSTICO ALL
+        const edadesALL = data.map(p => p["Edad de diagnóstico ALL (años)"]).filter(e => e != null && !isNaN(e));
+
+        if (edadesALL.length > 0) {
+            const distALL = calcularHistograma(edadesALL);
+            charts.all = new Chart(document.getElementById("graficaALL"), {
+                type: "line",
+                data: {
+                    labels: distALL.labels,
+                    datasets: [{
+                        label: "Edad diagnóstico ALL",
+                        data: distALL.values,
+                        borderColor: "purple",
+                        backgroundColor: "rgba(128, 0, 128, 0.3)",
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {title: {display: true, text: "Edad de diagnóstico (años)"}},
+                        y: {title: {display: true, text: "Frecuencia"}}
+                    }
+                }
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
